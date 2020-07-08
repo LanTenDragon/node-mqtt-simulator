@@ -1,10 +1,8 @@
 require('dotenv').config( {path: '.env.' + process.env.NODE_ENV})
 const Logger = require('./logger')
-const http = require('http')
 const StateMachine = require('javascript-state-machine')
 const mqtt = require('mqtt')
 const MqttClient = mqtt.connect(process.env.MQTT_URL)
-const port = process.env.PORT
 
 const LowPowerSimulator = {
     ceiling: 5,
@@ -95,7 +93,7 @@ function MqttPublishLoop() {
         floor: LowPowerSimulator.floor,
     }
     Logger('LowPowerSimulator ' + JSON.stringify(req))
-    MqttClient.publish('socket/' + req.id + '/power', JSON.stringify(req))
+    MqttClient.publish('socket/5eff0869be397a4138c3d96e/' + req.id + '/power', JSON.stringify(req))
 
     const req2 = {
         id: '5f048ae68ade5f0a6c64905c',
@@ -105,7 +103,7 @@ function MqttPublishLoop() {
         floor: HighPowerSimulator.floor,
     }
     Logger('HighPowerSimulator ' + JSON.stringify(req2))
-    MqttClient.publish('socket/' + req2.id + '/power', JSON.stringify(req2))
+    MqttClient.publish('socket/5eff0869be397a4138c3d96e/' + req2.id + '/power', JSON.stringify(req2))
 }
 
 let RandomDuration = 1000
@@ -139,9 +137,3 @@ function StateRandomiser() {
 
 setInterval(MqttPublishLoop, 1000)
 setInterval(StateRandomiser, RandomDuration)
-
-http.createServer(function (req, res) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    res.write('Hello World!');
-    res.end();
-}).listen(port);
