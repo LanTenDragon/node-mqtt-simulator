@@ -1,8 +1,36 @@
 require('dotenv').config( {path: '.env.' + process.env.NODE_ENV})
+const MongoURL = process.env.MONGODB || 'mongodb://localhost/test'
+const mongoose = require('mongoose')
+const Power = require('./powerModel.js')
 const Logger = require('./logger')
 const StateMachine = require('javascript-state-machine')
 const mqtt = require('mqtt')
 const MqttClient = mqtt.connect(process.env.MQTT_URL)
+
+mongoose.connect(MongoURL, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
+
+const db = mongoose.connection
+db.on('error', console.error.bind(console, 'connection error:'))
+db.once('open', function () {
+  Logger('Mongoose connection successful')
+})
+
+MqttClient.subscribe('socket/+/+/power', function (err) {
+  if (!err) {
+    Logger('Subscribed to socket power tree topic')
+  }
+})
+
+MqttClient.on('message', function (topic, message) {
+  const POJO = JSON.parse(message.toString())
+  const powerObject = new Power({ amount: POJO.power, belongsTo: POJO.id })
+  //console.log(powerObject)
+  powerObject.save(function (err) {
+    if (err) Logger(err.stack)
+      Logger('saved' + topic + ' ' + message)
+  })
+})
+
 
 const LowPowerSimulator = {
     ceiling: 5,
@@ -92,7 +120,7 @@ function MqttPublishLoop() {
         ceiling: LowPowerSimulator.ceiling,
         floor: LowPowerSimulator.floor,
     }
-    Logger('LowPowerSimulator ' + JSON.stringify(req))
+//    Logger('LowPowerSimulator ' + JSON.stringify(req))
     MqttClient.publish('socket/5eff0869be397a4138c3d96e/' + req.id + '/power', JSON.stringify(req))
 
     const req2 = {
@@ -102,8 +130,8 @@ function MqttPublishLoop() {
         ceiling: HighPowerSimulator.ceiling,
         floor: HighPowerSimulator.floor,
     }
-    Logger('HighPowerSimulator ' + JSON.stringify(req2))
-    MqttClient.publish('socket/5eff0869be397a4138c3d96e/' + req2.id + '/power', JSON.stringify(req2))
+//    Logger('HighPowerSimulator ' + JSON.stringify(req2))
+//    MqttClient.publish('socket/5eff0869be397a4138c3d96e/' + req2.id + '/power', JSON.stringify(req2))
 }
 
 let RandomDuration = 1000
